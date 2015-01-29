@@ -10,7 +10,7 @@ com.notebook = {
         sidebarWidth : 500,
         sidebarHeight : 480,
         sidebarX : 0,
-        sidebarY : 0
+        sidebarY : 0 
     },
 
     debugLog: function(msg){
@@ -30,7 +30,6 @@ com.notebook = {
         //alert.setIcon(icon);
         alert.addButtonWithTitle('OK');
         alert.addButtonWithTitle('Cancel');
-  
         return alert;
     },
 
@@ -62,6 +61,8 @@ com.notebook = {
   
         this.debugLog("############################# obj.treeAsDictionary():")
         this.debugLog(obj.treeAsDictionary())
+
+
     },
 
     refreshPage: function() {
@@ -72,18 +73,17 @@ com.notebook = {
         doc.setCurrentPage(c);
     },
 
+    runCommand: function(cmd,path){
+        var task = [[NSTask alloc] init];    
+        task.setLaunchPath("/bin/bash");
+        task.setArguments(cmd);
+        task.launch();
+    },
+
     showMessage: function(msg){
-        var error = [[NSTask alloc] init]
-        
-        [error setLaunchPath:"/bin/bash"]
-        [error setArguments:["-c", "afplay /System/Library/Sounds/Basso.aiff"]]
-
-        // [error setLaunchPath:"/bin/bash"]
-        // [error setArguments:["-c", 'say -v "Vicki" "dammit"']]
-
-        [error launch]
-
-        [doc showMessage: msg]; 
+        // this.runCommand(['-c', 'say "dammit"']);
+        this.runCommand(['-c', 'afplay /System/Library/Sounds/Basso.aiff']);
+        [doc showMessage: msg];
     },
 
     checkSelection : function(sel){
@@ -105,7 +105,7 @@ com.notebook = {
             aWidth = artboard.frame().width() + 500;
 
         sidebar.parentGroup().removeLayer(sidebar);
-        artboard.addLayer(sidebar);
+        artboard.addLayers([sidebar]);
 
         sidebar.setName("--nb--sidebar");
         sidebar.frame().setX(sX);
@@ -163,9 +163,7 @@ com.notebook = {
         var sidebar = sidebar || this.getSidebar(),
             artboard = sidebar.parentGroup(),
             height = artboard.frame().height(),
-            bgLayer = this.predicate({key : "(name != NULL) && (name == %@)",match : "bg"}, sidebar);
-            //bgLayer = [bgLayer objectAtIndex:0];
-
+            bgLayer = this.predicate({key : "(name != NULL) && (name == %@)",match : "sidebar-bg" }, sidebar);
         bgLayer.frame().setHeight(height);
 
     },
@@ -200,7 +198,8 @@ com.notebook = {
     },
 
     methodsFor: function(obj){
-        this.debugLog([obj class].mocha().instanceMethods())
+        log([obj class].mocha().instanceMethods())
+        log([obj class].mocha().instanceMethodsWithAncestors())
     },
 
     alertHandler: function(alert, responseCode){
@@ -265,7 +264,7 @@ com.notebook = {
             var page = [doc currentPage],
             artboard = [page currentArtboard];
             if(!artboard){
-                this.showMessage("Please add an artboard to use this plugin");
+                this.showMessage("Please add an artboard");
                 return false;
             }
 
@@ -322,7 +321,7 @@ com.notebook = {
             //this.realignComments();
             var newY = this.getLastCommentPosition();
 
-            commentGroup.addLayer(c);
+            commentGroup.addLayers([c]);
             c.frame().setX(0);
             c.frame().setY(newY);
 
@@ -401,7 +400,7 @@ com.notebook = {
             layer = this.predicate({key : "(name != NULL) && (name == %@)",match : "index"}, c),
             indicator = this.cloneLayer(layer);
 
-        ballsContainer.addLayer(indicator);
+        ballsContainer.addLayers([indicator]);
         indicator.absoluteRect().setX(x+30);
         indicator.absoluteRect().setY(y+30);
         indicator.setName(commentId+"####"+indicator.name())
@@ -477,6 +476,7 @@ com.notebook = {
 
     realignComments: function(sidebar){
         this.debugLog("realigning comments");
+
         var sbExists = this.checkArtboardAndSidebar();
         if(!sbExists) return;
         var sidebar = sidebar || this.getSidebar(),
@@ -492,7 +492,6 @@ com.notebook = {
         //this.debugLog(cG.frame().y).setY(gy)
         cG.frame().setY(gY)
 
-
         for (var i = 0; i < comments.count(); i++) {
             var comment = comments.objectAtIndex(i);
             this.alignCommentText(comment);
@@ -501,6 +500,7 @@ com.notebook = {
                 "y" : comment.absoluteRect().y()
             });
         };
+
         sortedComments = sortedComments.sort(function (a, b) {
                   if (a.y > b.y) {
                     return 1;
@@ -511,9 +511,24 @@ com.notebook = {
                   // a must be equal to b
                   return 0;
                 });
+
         this.commentRepositioning(sortedComments);
         this.commentRenumbering(sortedComments);
-        this.iRelocation()
+        this.iRelocation();
+        this.bringToFront();
+        this.setSidebarHeight(sidebar);
+    },
+
+    bringToFront: function(){
+        this.debugLog("bringing comments to front");
+        var sidebar = this.getSidebar(),
+            balls = this.getBallsContainer(),
+            artboard = doc.currentPage().currentArtboard();
+
+            sidebar.parentGroup().removeLayer(sidebar);
+            balls.parentGroup().removeLayer(balls);
+            artboard.addLayers([sidebar]);
+            artboard.addLayers([balls]);
     },
 
     iRelocation: function(){
@@ -524,6 +539,8 @@ com.notebook = {
             ballsContainer = this.getBallsContainer();
 
         for (var i = 0; i < comments.count(); i++) {
+            var tmp = [comments objectAtIndex:i];
+
             var comment = [comments objectAtIndex:i],
                 commentId = comment.name().split("####")[1]),
                 clID = comment.name().split("####")[3],
@@ -536,8 +553,8 @@ com.notebook = {
                 ballsContainer = this.getBallsContainer(),
                 indicator = this.predicate({key : "(name != NULL) && (name == %@)",match : commentId+'####index'}, ballsContainer);
 
-            this.debugLog("current position: ["+indicator.absoluteRect().x()+","+indicator.absoluteRect().y()+"]")
-            this.debugLog(" future position: ["+clx+","+cly+"]")
+            // this.debugLog("current position: ["+indicator.absoluteRect().x()+","+indicator.absoluteRect().y()+"]")
+            // this.debugLog(" future position: ["+clx+","+cly+"]")
 
             indicator.absoluteRect().setX(clx);
             indicator.absoluteRect().setY(cly);
@@ -548,7 +565,6 @@ com.notebook = {
     },
 
     checkDeletedComments: function(comments){
-        this.debugLog("checking for deleted comments")
         var commentsIds = [],
             index,
             ballsContainer = this.getBallsContainer(),
@@ -564,7 +580,6 @@ com.notebook = {
             var indicator = [balls objectAtIndex:i],
                 index = (indicator.name()).split("####"),
                 index = index[0];
-                //this.debugLog(commentsIds.indexOf(index))
             if(commentsIds.indexOf(index)==-1) {
                 indicator.parentGroup().removeLayer(indicator);
                 if(this.flags.deletedComments==false) this.flags.deletedComments = 0;
@@ -605,16 +620,12 @@ com.notebook = {
                 label = this.predicate({key : "(name != NULL) && (name == %@)",match : '#'}, indicator);
                 if(indicator){
                     var ci = comment.el.name().split("####")[1];
-                        //commentedLayer = comment.el.name().split("####")[3];
-                    //this.debugLog("  comment index:"+ci)
-                    //this.debugLog("           ival:"+ival)
-                    //this.debugLog("indicator index:"+(indicator.name()).split('####')[0])
-                    //this.debugLog("     final name: "+ival+"####index")
-                  indicator.setName(commentId+"####index")
-                  //this.iRelocation(indicator, commentedLayer)
+                    indicator.setName(commentId+"####index")
                 }
+
                 this.setStringValue(label,ival.toString());
                 this.setStringValue(index,ival.toString());
+
         };
     },
 
@@ -641,7 +652,7 @@ com.notebook = {
                 }
             }
             else if(layerName=='comment body'){
-                this.setStringValue(layer,data['text']);
+                this.setStringValue(layer,data['text'],true);
             }
 
             this.alignCommentText(comment);
@@ -666,6 +677,8 @@ com.notebook = {
         this.debugLog("refreshing text size: "+layer)
         if(fit) [layer adjustFrameToFit]
         [layer select:true byExpandingSelection:false];
+        [layer setIsEditingText:true]
+        [layer setIsEditingText:false]
         [layer select:false byExpandingSelection:false];
     },
 
@@ -729,23 +742,52 @@ com.notebook = {
         return group;
     },
 
+    addOval: function(parent,name,bg,w,h,x,y){
+        var parent = parent || doc.currentPage(),
+            name = name || "new oval layer",
+            bg = bg || "#000000",
+            //bg = MSColor.colorWithSVGString(bg),
+            //bgColor = [MSColor colorWithHex: bg alpha: 1],
+            w = w || 400,
+            h = h || 400,
+            y = y || 0,
+            x = x || 0;
+
+        var ovalShape = MSOvalShape.alloc().init();
+        ovalShape.frame = MSRect.rectWithRect(NSMakeRect(x,y,w,h));
+
+        var shapeGroup=ovalShape.embedInShapeGroup();
+        var fill = shapeGroup.style().fills().addNewStylePart();
+        fill.color = MSColor.colorWithSVGString(bg);
+
+        parent.addLayers([shapeGroup])
+
+        return shapeGroup;
+    },
+
     addRect: function(parent,name,bg,w,h,x,y){
         this.debugLog("adding rect layer")
         var parent = parent || doc.currentPage(),
-            name = name || "new layer",
+            name = name || "new rect layer",
             bg = bg || "#000000",
-            bgColor = [MSColor colorWithHex: bg alpha: 1],
+            //bg = MSColor.colorWithSVGString(bg),
+            //bgColor = [MSColor colorWithHex: bg alpha: 1],
             w = w || 400,
             h = h || 400,
             y = y || 0,
             x = x || 0;
 
         var rect = parent.addLayerOfType("rectangle");
+            rect = rect.embedInShapeGroup();
+
+        var fill = rect.style().fills().addNewStylePart();
+            fill.color = MSColor.colorWithSVGString(bg);
+
             rect.setName(name);
             rect.setNameIsFixed(true)
-            rect.style().fills().addNewStylePart();
-            rect.style().fill().setFillType(0);
-            rect.style().fill().setColor(bgColor);
+            // rect.style().fills().addNewStylePart();
+            // rect.style().fill().setFillType(0);
+            // rect.style().fill().setColor(bgColor);
             rect.frame().setWidth(w);
             rect.frame().setHeight(h);
             rect.frame().setX(x);
@@ -760,7 +802,8 @@ com.notebook = {
         var parent = parent || doc.currentPage(),
             name = name || "new text layer",
             color = color || "#000000",
-            color = [MSColor colorWithHex: color alpha: 1],
+            // color = [MSColor colorWithHex: color alpha: 1],
+            color = MSColor.colorWithSVGString(color),
             fontSize = fontSize || 14,
             string = string || "Type something",
             w = w || 400,
@@ -776,11 +819,11 @@ com.notebook = {
 
             textLayer.setName(name);
             textLayer.setNameIsFixed(true);
-            textLayer.setStringValue(string);
+            this.setStringValue(textLayer, string);
             
             var textLayerFrame = [textLayer frame];
             [textLayerFrame setWidth: w];
-            [textLayerFrame setHeight: h];
+            //[textLayerFrame setHeight: h];
             
             [textLayerFrame setX: x];
             [textLayerFrame setY: y];
@@ -789,9 +832,29 @@ com.notebook = {
                 textLayer.setTextBehaviour(1) // BCTextBehaviourFixedWidth
             }
 
-            textLayer.setFontPostscriptName('Raleway')
+            textLayer.setFontPostscriptName('Optima')
 
         return textLayer;
+    },
+
+    getMetadata: function(){
+
+        var name = ([doc displayName]).split('.sketch')[0],
+            author = NSUserName(),
+            objToday = new Date(),
+            day = objToday.getDay(),
+            day = (day > 9) ? day : "0"+day,
+            month = objToday.getMonth(),
+            yr = objToday.getFullYear(),
+            date = day+"/"+month+"/"+yr;
+
+        var meta = {
+            name : name,
+            date : date,
+            author : author
+        };
+
+        return meta;
     },
 
     generateAssets: function(){
@@ -824,8 +887,8 @@ com.notebook = {
         // background
         this.debugLog("generating assets: sidebar background")
         //            addRect(parent,name,bg,w,h,x,y)
-        var bg = this.addRect(sidebar,'bg', sc.bg, sc.width, sc.height, sc.x, sc.y);
-        //this.storeStyle(bg);
+        var bg = this.addRect(sidebar,'sidebar-bg', sc.bg, sc.width, sc.height, sc.x, sc.y);
+        this.storeStyle(bg,"sidebar:bg");
 
         // Header
         this.debugLog("generating assets: sidebar header")
@@ -840,6 +903,8 @@ com.notebook = {
             topLineY = logo.frame().y() + logo.frame().height() + 20,
             topLine = this.addRect(header,'bottomLine', sc.separatorColor, sc.contentW, 1, sc.margin, topLineY);
 
+        this.storeSymbol(header,"header");
+
         // Metadata group
         this.debugLog("generating assets: sidebar metadata")
         var m = sidebar.addLayerOfType("group"),
@@ -853,19 +918,50 @@ com.notebook = {
         m.enableAutomaticScaling();
         
         var mInfo = ['PROJECT','DATE','AUTHOR','DEVICE'];
+
+        var meta = this.getMetadata();
+
+
+
+        var mInfo2 = [
+                        {
+                            "label": "Project",
+                            "value": meta.name,
+                        },
+                        {
+                            "label": "Date",
+                            "value": meta.date,
+                        },
+                        {
+                            "label": "Author",
+                            "value": meta.author,
+                        }
+                     ];
+
         // Metadata labels & values
         var newY = 0;
-        for (var i = 0; i < mInfo.length; i++) {
-            var label = this.addTxt(m,'label_'+mInfo[i],'#61625E',11,mInfo[i]+":",100,11,0,newY+3,fixed=true),
-                value = this.addTxt(m,'value_'+mInfo[i],'#C4C5C3',14,mInfo[i],360,21,80,newY,fixed=true);
+        for (var i = 0; i < mInfo2.length; i++) {
+            var label = this.addTxt(m,'label_'+mInfo2[i].label,'#61625E',12,mInfo2[i].label.toUpperCase()+":",65,11,0,newY+2,fixed=true),
+                value = this.addTxt(m,'value_'+mInfo2[i].value,'#C4C5C3',14,mInfo2[i].value,360,21,80,newY,fixed=true),
+                lid,vid;
             newY = newY+sc.margin;
             this.txtRefreshSize(label);
             this.txtRefreshSize(value);
+            if(i==0){
+                this.storeStyle(label,"metadata:label");
+                lid = label.style().sharedObjectID();
+                this.storeStyle(value,"metadata:value");
+                vid = value.style().sharedObjectID();
+            }else{
+                // label.style().setSharedObjectID(lid);
+                // value.style().setSharedObjectID(vid);
+            }
         };
 
         var midLineY = newY + value.frame().height();
             midLine = this.addRect(m,'bottomLine', sc.separatorColor, sc.contentW, 1, 0, midLineY);
 
+        this.storeSymbol(m,"metadata");
         // Screen name
         this.debugLog("generating assets: sidebar screen name")
         var sLx = midLine.absoluteRect().x(),
@@ -875,9 +971,11 @@ com.notebook = {
         screenLabel.absoluteRect().setX(sLx);
         screenLabel.absoluteRect().setY(sLy);
         this.txtRefreshSize(screenLabel);
+        
 
         var sNy = screenLabel.absoluteRect().y() + screenLabel.absoluteRect().height() + 10,
             screenName = this.addTxt(sidebar,'Page Title','#ffffff',18,"ARTBOARD NAME",300,21,sc.margin,sNy);
+            this.storeStyle(screenName,"sidebar:screen_name");
 
         var bottomLineY = screenName.absoluteRect().y() + screenName.absoluteRect().height() + sc.margin,
             bottomLine = this.addRect(sidebar,'bottomLine', sc.separatorColor, sc.contentW, 1, sc.margin, bottomLineY);
@@ -898,14 +996,16 @@ com.notebook = {
 
         //title
         this.debugLog("generating assets: comment title")
-        var titleY = 5,
+        var titleY = 7,
             title = this.addTxt(comment,'comment title','#ffffff',14,"TITLE",400,16,40,titleY,fixed=true);
+            this.storeStyle(title,"comment:title");
 
         //body
         this.debugLog("generating assets: comment body")
         var bodyY = title.absoluteRect().y() + title.absoluteRect().height() + 10,
             body = this.addTxt(comment,'comment body','#9C9D9B',14,"Comment",400,16,40,bodyY,fixed=true);
-            body.frame().setWidth(400);
+        this.storeStyle(body,"comment:body");
+            //body.frame().setWidth(400);
             //body.setTextWidth(1)
         
         body.absoluteRect().setY(bodyY);
@@ -921,17 +1021,20 @@ com.notebook = {
 
         // index bg
         this.debugLog("generating assets: comment index bg")
-        var iBg = this.addRect(index, 'bg', '#55910B', 30, 30, 0, 0);
-        var firstObject = [[iBg layers] firstObject];
-        [firstObject setFixedRadius:15];
-        [firstObject resetPointsBasedOnUserInteraction];
+        var iBg = this.addOval(index, 'bg', '#55910B', 30, 30, 0, 0);
+        // var firstObject = [[iBg layers] firstObject];
+        // [firstObject setFixedRadius:15];
+        // [firstObject resetPointsBasedOnUserInteraction];
+        this.storeStyle(iBg,"comment:index:bg");
 
         // index label
         this.debugLog("generating assets: comment index label")
-        var iLabel = this.addTxt(index,'#','#ffffff',14,"#",8,16,10,6);
+                        //function(parent,name,color,fontSize,string,w,h,x,y,fixed){
+        var iLabel = this.addTxt(index,'#','#ffffff',14,"#",30,30,0,0,fixed=true);
             iLabel.setTextAlignment(2);
-            iLabel.setFontPostscriptName('Helvetica Neue')
-        this.txtRefreshSize(body);
+            iLabel.setLineSpacing(23);
+            this.storeStyle(iLabel,"comment:index");
+            //iLabel.setFontPostscriptName('Helvetica Neue');
 
         // center canvas on sidebar
         // var view = [doc currentView];
@@ -948,48 +1051,27 @@ com.notebook = {
         this.debugLog("assets generated")
     },
 
+    storeSymbol: function(obj,name){
+        this.debugLog("storing symbol")
+        var symbols=doc.documentData().layerSymbols();
 
+        //log(symbols.addSharedObjectWithName)
+        // var sharedStyles=doc.documentData().layerStyles();
+        // symbols.addSharedStyleWithName_firstInstance("nbassets:sidebar:bg",bg.style());
+        //dataContainer.sharedStyleWithID(this.orig.style().sharedObjectID())
+    },
 
-    storeStyle: function(obj, kind){
-        this.debugLog("storing '"+kind+"' styles")
-        var layerTextStyles = [[[doc documentData] layerTextStyles]];
-        var layerStyles = [[[doc documentData] layerStyles]];
-        var layerSymbols = [[[doc documentData] layerSymbols]];
+    storeStyle: function(obj,name){
+        this.debugLog("storing styles")
+        var style = style = obj.style();
 
+        if ([obj class] == MSTextLayer) {
+            var sharedStyles=doc.documentData().layerTextStyles();
+        }else{
+            var sharedStyles=doc.documentData().layerStyles();
+        }
+        sharedStyles.addSharedStyleWithName_firstInstance("nb:assets:"+name,style);
 
-        log(layerTextStyles.insertObject());
-
-        // this.debugLog("layerStyles: "+layerStyles);
-
-        // for (var i=0; i < [layerStyles count]; i++){
-        //     this.debugLog([[layerStyles objectAtIndex:i] name]) // MSStyle
-        //     var style = [[layerStyles objectAtIndex:i] style]
-        //     this.debugLog(style) // MSStyle
-        //     this.debugLog(style.fills()) // MSFillStyleCollection
-        //     this.debugLog(style.borders()) // MSBorderStyleCollection
-        //     this.debugLog(style.shadows()) // MSShadowStyleCollection
-        //     this.debugLog(style.innerShadows()) // MSInnerShadowStyleCollection
-        //     this.debugLog(style.blur()) // MSStyleBlur
-        //     this.debugLog(style.reflection()) // MSStyleReflection
-        // }
-
-        // var textStyles = [[[doc documentData] layerTextStyles] objects];
-        // this.debugLog("#### text styles:")
-        // for (var i=0; i < [textStyles count]; i++){
-        //     //this.debugLog([[textStyles objectAtIndex:i] name]) // MSStyle
-        //     var style = [textStyles objectAtIndex:i],
-        //         styleName = [[textStyles objectAtIndex:i] name],
-        //         styleAttrs = style.style().textStyle().attributes();
-        //         this.debugLog('######## ' + styleName + ' attrs:');
-        //         this.debugLog('########' + styleAttrs)
-        //         this.debugLog('########' + style)
-        // }
-
-        // // artboard is your artboard where you want to add the text layer to
-        // var textLayer = artboard.addLayerOfType("text");
-
-        // // apply attributes
-        // textLayer.style().textStyle().setAttributes(textStyle);
     },
 
     getAsset: function(asset){
@@ -1027,14 +1109,14 @@ com.notebook = {
         var page = [doc currentPage],
             artboard = [page currentArtboard];
         if(!artboard){
-            this.showMessage("No comments to align.");
+            this.showMessage("No comments to align");
             return false;
         }
 
         var sidebarExists = this.predicate({key : "(name != NULL) && (name == %@)", match : '--nb--sidebar'}, artboard);
 
         if (!sidebarExists){
-            this.showMessage("Dude, this page has no comments! Use 'ctrl + alt + ⌘ + 9' to add a new one.");
+            this.showMessage("Dude, this page has no comments! Use 'ctrl + alt + ⌘ + 9' to add a new one");
             return false;
         }
 

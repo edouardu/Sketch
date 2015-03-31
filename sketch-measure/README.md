@@ -4,6 +4,9 @@ A measure tool for measurements & design specs, **Sketch 3.0.2+ support**.
 
 ![Banner](http://utom.us/new/assets/imgs/sketch-measure-icon@2x.png)
 ## Updates
+##### Nov 5, 2014
+* Sketch 3.2 beta supported
+
 ##### Sep 23, 2014
 * Add properties get shadow and inner shadow
 * Fixes some bugs
@@ -45,6 +48,8 @@ _NOTE: If your Mac has not installed GitHub client, You need to install [GitHub 
 3. Distances: `⌃` + `⌘` + `3`
 4. Properties: `⌃` + `⌘` + `4`
 5. Coordinates: `⌃` + `⌘` + `5`
+6. Toggle All Measure Hidden `Ctrl+Shift+H`
+7. Clear All Measure
 
 ### NOTE
 

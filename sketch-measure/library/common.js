@@ -1,5 +1,6 @@
 var page = [doc currentPage],
   artboard = [page currentArtboard],
+  artboards = [doc artboards],
   current = artboard ? artboard : page,
   prefix = 'utom',
   configs = {},
@@ -48,7 +49,11 @@ function addGroup(name, parent) {
 }
 
 function addShape(name, parent) {
-  return addLayer(name, 'rectangle', parent);
+  var layer = addLayer(name, 'rectangle', parent);
+  if (isShape(layer)){
+    return layer;
+  }
+  return [layer embedInShapeGroup];
 }
 
 function addText(name, parent) {
@@ -97,6 +102,13 @@ function setSize(layer, width, height, absolute) {
   return layer;
 }
 
+
+function eachArtboard( fn ) {
+  for (var j = 0; j < [artboards count]; j++){
+    var artboard = artboards.objectAtIndex(j);
+    fn(artboard);
+  }
+}
 
 function setPosition(layer, x, y, absolute) {
   if(absolute){

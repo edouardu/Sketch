@@ -1,9 +1,20 @@
-*Portable Plugin Repository.*
+Portable Plugin Repository
 
-- - -
+–
 
-Sketch Measure: https://github.com/utom/sketch-measure
+Table of Contents
 
-Swatches: https://github.com/jodyheavener/Swatches
-
-Sketch Notebook: https://github.com/marcosvidal/Sketch-Notebook
+1. Dynamic Button:
+2. Generate Flowchart:
+3. Generate Gif:
+4. Generate Icns:
+5. Marvel Plugin:
+6. Send to Slack:
+7. Sketch Measure: https://github.com/utom/sketch-measure
+8. Sketch Notebook: https://github.com/marcosvidal/Sketch-Notebook
+9. Sketch Origami Export:
+10. Sketch Plugins:
+11. Sketch Scripts:
+12. Swap Border:
+13. Swap Styles:
+14. Swatches: https://github.com/jodyheavener/Swatches

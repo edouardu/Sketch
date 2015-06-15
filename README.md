@@ -1,6 +1,6 @@
 Portable Plugin Repository
 
-–
+—
 
 Table of Contents
 

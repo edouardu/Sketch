@@ -1,0 +1,11 @@
+@import 'userflows.js'
+
+var generateFlow = function(context) {
+	parseContext(context)
+	askForFlowDetails()
+}
+
+var editSettings = function(context) {
+	parseContext(context)
+	showSettingsDialog()
+}

@@ -4,7 +4,7 @@ Portable Plugin Repository
 
 Table of Contents
 
-1. Dynamic Button:
+1. Sketch Palettes — https://github.com/andrewfiorillo/sketch-palettes
 2. Generate Flowchart:
 3. Generate Gif:
 4. Generate Icns:

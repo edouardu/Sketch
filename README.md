@@ -10,9 +10,6 @@ Table of Contents
 4. Sketch Data Populator — https://github.com/preciousforever/sketch-data-populator
 5. Swap Fills & Borders — https://github.com/nathco/Swap-Fill-Border
 
--
--
-
 2. Generate Flowchart:
 3. Generate Gif:
 4. Generate Icns:
@@ -22,6 +19,5 @@ Table of Contents
 9. Sketch Origami Export:
 10. Sketch Plugins:
 11. Sketch Scripts:
-12. Swap Border:
 13. Swap Styles:
 14. Swatches: https://github.com/jodyheavener/Swatches

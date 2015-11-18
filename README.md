@@ -9,6 +9,11 @@ Table of Contents
 3. Sketch Style Inventory — https://github.com/getflourish/Sketch-Style-Inventory
 4. Sketch Data Populator — https://github.com/preciousforever/sketch-data-populator
 5. Swap Fills & Borders — https://github.com/nathco/Swap-Fill-Border
+6. Swatches — https://github.com/jodyheavener/Swatches
+
+
+-
+
 
 2. Generate Flowchart:
 3. Generate Gif:
@@ -20,4 +25,3 @@ Table of Contents
 10. Sketch Plugins:
 11. Sketch Scripts:
 13. Swap Styles:
-14. Swatches: https://github.com/jodyheavener/Swatches

@@ -6,6 +6,7 @@ Table of Contents
 
 1. Sketch Palettes — https://github.com/andrewfiorillo/sketch-palettes
 2. Sketch Measure — https://github.com/utom/sketch-measure
+3. Sketch Style Inventory — https://github.com/getflourish/Sketch-Style-Inventory
 
 -
 -

@@ -10,13 +10,13 @@ Table of Contents
 4. Sketch Data Populator — https://github.com/preciousforever/sketch-data-populator
 5. Swap Fills & Borders — https://github.com/nathco/Swap-Fill-Border
 6. Swatches — https://github.com/jodyheavener/Swatches
+7. Generate GIF — https://github.com/nathco/generate-gif
 
 
 -
 
 
 2. Generate Flowchart:
-3. Generate Gif:
 4. Generate Icns:
 5. Marvel Plugin:
 6. Send to Slack:

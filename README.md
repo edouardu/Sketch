@@ -8,6 +8,7 @@ Table of Contents
 2. Sketch Measure — https://github.com/utom/sketch-measure
 3. Sketch Style Inventory — https://github.com/getflourish/Sketch-Style-Inventory
 4. Sketch Data Populator — https://github.com/preciousforever/sketch-data-populator
+5. Swap Fills & Borders — https://github.com/nathco/Swap-Fill-Border
 
 -
 -

@@ -13,12 +13,12 @@ Table of Contents
 7. Generate GIF — https://github.com/nathco/generate-gif
 8. Magic Mirror — http://magicmirror.design
 9. Fluid — https://github.com/matt-curtis/Fluid-for-Sketch
+10. AE Flowchart — https://github.com/tadija/AEFlowchart
 
 
 -
 
 
-2. Generate Flowchart:
 4. Generate Icns:
 5. Marvel Plugin:
 6. Send to Slack:

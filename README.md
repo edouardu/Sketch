@@ -12,6 +12,7 @@ Table of Contents
 6. Swatches — https://github.com/jodyheavener/Swatches
 7. Generate GIF — https://github.com/nathco/generate-gif
 8. Magic Mirror — http://magicmirror.design
+9. Fluid — https://github.com/matt-curtis/Fluid-for-Sketch
 
 
 -

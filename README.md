@@ -14,16 +14,3 @@ Table of Contents
 8. Magic Mirror — http://magicmirror.design
 9. Fluid — https://github.com/matt-curtis/Fluid-for-Sketch
 10. AE Flowchart — https://github.com/tadija/AEFlowchart
-
-
--
-
-
-4. Generate Icns:
-5. Marvel Plugin:
-6. Send to Slack:
-8. Sketch Notebook: https://github.com/marcosvidal/Sketch-Notebook
-9. Sketch Origami Export:
-10. Sketch Plugins:
-11. Sketch Scripts:
-13. Swap Styles:

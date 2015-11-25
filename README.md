@@ -11,6 +11,7 @@ Table of Contents
 5. Swap Fills & Borders — https://github.com/nathco/Swap-Fill-Border
 6. Swatches — https://github.com/jodyheavener/Swatches
 7. Generate GIF — https://github.com/nathco/generate-gif
+8. Magic Mirror — http://magicmirror.design
 
 
 -

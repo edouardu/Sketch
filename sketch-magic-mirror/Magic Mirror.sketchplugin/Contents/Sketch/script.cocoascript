@@ -1,0 +1,48 @@
+@import "helper.js"
+@import "LayerHelper.cocoascript"
+@import "BezierPathHelper.cocoascript"
+@import "ImageHelper.cocoascript"
+@import "MagicMirror.coscript"
+
+function mirrorPage(context) {
+    var mirror = MagicMirror(context)
+    mirror.mirrorPage()
+}
+
+function jumpToArtboard(context) {
+    var mirror = MagicMirror(context)
+    mirror.jumpToArtboard()
+}
+
+function highlightMirrors(context) {
+    var mirror = MagicMirror(context)
+    mirror.highlightMirrors()
+}
+
+function rotatePoints(context) {
+    var mirror = MagicMirror(context)
+    mirror.rotatePoints()
+}
+
+function flipHorizontally(context) {
+    var mirror = MagicMirror(context)
+    mirror.flipHorizontally()
+}
+
+function activate(context) {
+    var mirror = MagicMirror(context)
+    mirror.activate()
+}
+
+function license(license) {
+    MagicMirror.validator().manualActivation(license, MagicMirror.persister())
+}
+
+function info() {
+    log(MagicMirror.persister().licensedTo)
+}
+
+function getTemplates(context) {
+    var mirror = MagicMirror(context)
+    mirror.getTemplates();
+}

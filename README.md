@@ -17,3 +17,5 @@ Table of Contents
 11. Send to Slack — https://github.com/shahruz/Send-to-Slack
 12. Sketch Color Contrast Analyser — https://github.com/getflourish/Sketch-Color-Contrast-Analyser
 13. UserFlows — https://github.com/abynim/userflows
+14. Sketch Origami Export — https://github.com/tarngerine/sketch-origami-export
+15. Sketch Text Tools — https://github.com/automat/sketch-text-tools

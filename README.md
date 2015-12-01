@@ -14,3 +14,4 @@ Table of Contents
 8. Magic Mirror — http://magicmirror.design
 9. Fluid — https://github.com/matt-curtis/Fluid-for-Sketch
 10. AE Flowchart — https://github.com/tadija/AEFlowchart
+11. Send to Slack — https://github.com/shahruz/Send-to-Slack

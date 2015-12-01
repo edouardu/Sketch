@@ -15,3 +15,4 @@ Table of Contents
 9. Fluid — https://github.com/matt-curtis/Fluid-for-Sketch
 10. AE Flowchart — https://github.com/tadija/AEFlowchart
 11. Send to Slack — https://github.com/shahruz/Send-to-Slack
+12. Sketch Color Contrast Analyser — https://github.com/getflourish/Sketch-Color-Contrast-Analyser

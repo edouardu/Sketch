@@ -21,3 +21,4 @@ Table of Contents
 15. Sketch Text Tools — https://github.com/automat/sketch-text-tools
 16. Marvel Sketch Plugin — https://github.com/marvelapp/marvel-sketch
 17. Swap Styles — https://github.com/ozzik/swap-styles
+18. Stitch — https://github.com/mattsjohnston/stitch

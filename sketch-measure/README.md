@@ -1,8 +1,11 @@
 # Sketch Measure
 
-Make it a fun to create spec for developers and teammates, **Sketch 39.* support**. 
+Make it a fun to create spec for developers and teammates, **Sketch 40.* support**. 
 
-###[Sponsor me to buy new iPhone](http://utom.design/measure/donate.html)
+- [How to](http://utom.design/measure/how-to.html)
+- [中文说明](http://sketch.im/plugins/1)
+
+#### [Sponsor me to buy new iPhone](http://utom.design/measure/donate.html)
 
 ![Logo](http://utom.design/logo@2x.png)
 
@@ -13,7 +16,7 @@ Make it a fun to create spec for developers and teammates, **Sketch 39.* support
 ## New UI
 Friendly user interface offers you a more intuitive way of making marks.
 ### How to
-* Hold down the `Option` key on keyboard and click mark button on toolbar.
+* Hold down the `Option` key on keyboard and click icons on the toolbar will show panels.
 
 ![SPEC EXPORT](http://utom.design/ui.png)
 
@@ -35,7 +38,7 @@ To create your own custom shortcuts, go to Keyboard in your System Preferences a
 * Author [utom](http://utom.design)
 * [SketchI18N](https://github.com/cute/SketchI18N), [cute](http://liguangming.com)
 * [esseak](https://github.com/esseak)
-* 繁體中文（台灣） by Kai
+* 繁體中文（台灣） by Kai and [Zih-Hong](http://zihhonglin.com)
 * And [Other](https://github.com/utom/sketch-measure/contributors)
 
 ##Contact

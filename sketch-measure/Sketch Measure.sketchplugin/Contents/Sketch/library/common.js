@@ -3,7 +3,9 @@ var I18N = {},
         "zh-Hans": "zh-cn",
         "zh-Hant": "zh-tw"
     },
+    macOSVersion = Number(NSDictionary.dictionaryWithContentsOfFile("/System/Library/CoreServices/SystemVersion.plist").objectForKey("ProductVersion")),
     lang = NSUserDefaults.standardUserDefaults().objectForKey("AppleLanguages").objectAtIndex(0),
+    lang = (macOSVersion >= 10.12)? lang.split("-").slice(0, -1).join("-"): lang,
     language = "";
 
 function _(str, data){
@@ -799,6 +801,9 @@ SM.extend({
         text.setTextBehaviour(1);
         text.setTextBehaviour(0);
 
+        text.setTextBehaviour(1); // fixed for v40
+        text.setTextBehaviour(0); // fixed for v40
+
         // get rect
         var targetRect = this.getRect(target),
             arrowRect = this.getRect(arrow),
@@ -1588,7 +1593,7 @@ SM.extend({
                     break;
                 case "line-height":
                     if(!self.is(target, MSTextLayer)) return false;
-                    content.push("line: " + self.convertUnit(target.lineSpacing(), true) + " (" + Math.round(target.lineSpacing() / target.fontSize() * 10) / 10  + ")" );
+                    content.push("line: " + self.convertUnit(target.lineHeight() || target.defaultLineHeight(), true) + " (" + Math.round((target.lineHeight() || target.defaultLineHeight()) / target.fontSize() * 10) / 10  + ")" );
                     break;
                 case "font-face":
                     if(!self.is(target, MSTextLayer)) return false;
@@ -2287,6 +2292,10 @@ SM.extend({
                 {
                     scale: 3 / this.configs.scale,
                     suffix: "@3x"
+                },
+                {
+                    scale: 4 / this.configs.scale,
+                    suffix: "@4x"
                 }
             ];
 
@@ -2535,27 +2544,12 @@ SM.extend({
                 var symbolRect = this.getRect(layer),
                     symbolChildren = layer.symbolMaster().children(),
                     tempSymbol = layer.duplicate(),
-                    tempGroup = tempSymbol.detachByReplacingWithGroup(),
-                    tempGroupRect = this.getRect(tempGroup),
-                    tempSymbolLayers = tempGroup.children().objectEnumerator(),
+                    tempGroup = tempSymbol.detachByReplacingWithGroup();
+
+                tempGroup.resizeToFitChildrenWithOption(0)
+
+                var tempSymbolLayers = tempGroup.children().objectEnumerator(),
                     idx = 0;
-
-                var tempArtboard = this.addShape();
-                tempGroup.addLayers([tempArtboard]);
-                var tempArtboardRect = this.getRect(tempArtboard),
-                    symbolMasterFrame = layer.symbolMaster().frame();
-
-                tempArtboardRect.setX(symbolRect.x);
-                tempArtboardRect.setY(symbolRect.y);
-                tempArtboardRect.setWidth(symbolMasterFrame.width());
-                tempArtboardRect.setHeight(symbolMasterFrame.height());
-
-                tempGroup.resizeToFitChildrenWithOption(0);
-                tempGroupRect.setX(symbolRect.x);
-                tempGroupRect.setY(symbolRect.y);
-                tempGroupRect.setWidth(symbolRect.width);
-                tempGroupRect.setHeight(symbolRect.height);
-                this.removeLayer(tempArtboard);
 
                 while(tempSymbolLayer = tempSymbolLayers.nextObject()){
                     self.getLayer(
@@ -2591,9 +2585,10 @@ SM.extend({
                 svgStrong = this.toJSString(NSString.alloc().initWithData_encoding(svgExporter, NSUTF8StringEncoding)),
                 regExpTspan = new RegExp('<tspan([^>]+)>([^<]*)</tspan>', 'g'),
                 regExpContent = new RegExp('>([^<]*)<'),
-                offsetX, offsetY, textData = [];
+                offsetX, offsetY, textData = [],
+                layerRect = this.getRect(layer);
             svgSpans = svgStrong.match(regExpTspan);
-            
+
             for (var a = 0; a < svgSpans.length; a++) {
                 var attrsData = this.getTextAttrs(svgSpans[a]);
                 attrsData.content = svgSpans[a].match(regExpContent)[1];
@@ -2626,7 +2621,7 @@ SM.extend({
                     )
                 ){
                     var textLayer = self.addText(),
-                        color = MSColor.colorWithSVGString(tData.fill);
+                        color = MSColor.colorWithSVGString(tData.fill || layerData.color["color-hex"]);
                     color.setAlpha(tData["fill-opacity"] || 1);
 
                     textLayer.setName(tData.content);
@@ -2642,12 +2637,16 @@ SM.extend({
                     if(tData["font-family"]){
                         textLayer.setFontPostscriptName(tData["font-family"].split(",")[0]);
                     }
+                    else{
+                        textLayer.setFontPostscriptName(layer.fontPostscriptName());
+                    }
 
                     parentGroup.addLayers([textLayer]);
 
                     var textLayerRect = self.getRect(textLayer);
-                    textLayerRect.setX(parentRect.x + layerData.rect.x + (self.toJSNumber(tData.x) - offsetX));
-                    textLayerRect.setY(parentRect.y + layerData.rect.y + (self.toJSNumber(tData.y) - offsetY));
+
+                    textLayerRect.setX(layerRect.x + (self.toJSNumber(tData.x) - offsetX));
+                    textLayerRect.setY(layerRect.y + (self.toJSNumber(tData.y) - offsetY));
 
                     self.getLayer(
                         artboard,
@@ -2772,7 +2771,6 @@ SM.extend({
                     exportOption: data.exportOption,
                     order: data.order
                 });
-
             }
         });
     },
@@ -2838,8 +2836,6 @@ SM.extend({
                             layer, // Sketch layer element
                             data.artboards[artboardIndex] // Save to data
                         );
-
-
                         layerIndex++;
                         exporting = false;
 
@@ -3016,15 +3012,22 @@ SM.extend({
         var layerType = this.is(layer, MSTextLayer) ? "text" :
                this.is(layer, MSSymbolInstance) ? "symbol" :
                this.is(layer, MSSliceLayer) || this.hasExportSizes(layer)? "slice":
-               "shape",
-            layerData = {
+               "shape";
+
+        if ( symbolLayer && layerType == "text" && layer.textBehaviour() == 0) { // fixed for v40
+            layer.setTextBehaviour(1); // fixed for v40
+            layer.setTextBehaviour(0); // fixed for v40
+        } // fixed for v40
+        
+        var layerData = {
                     objectID: this.toJSString( layer.objectID() ),
                     type: layerType,
                     name: this.toHTMLEncode(layer.name()),
                     rect: this.rectToJSON(layer.absoluteRect(), artboardRect)
                 };
 
-        if(symbolLayer) layerData.objectID = this.toJSString( symbolLayer.objectID() )
+        if(symbolLayer) layerData.objectID = this.toJSString( symbolLayer.objectID() );
+
 
         if ( layerType != "slice" ) {
             var layerStyle = layer.style();

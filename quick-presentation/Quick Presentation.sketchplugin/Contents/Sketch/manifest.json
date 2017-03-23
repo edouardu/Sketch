@@ -7,7 +7,7 @@
   "author" : "Tim Whalin",
 	"homepage": "https://github.com/timothywhalin/Sketch-Quick-Presentation",
   "updateURL": "https://github.com/timothywhalin/Sketch-Quick-Presentation",
-  "compatibleVersion": 3,
+  "compatibleVersion": 41,
   "bundleVersion": 1,
   "commands" : [
     {
@@ -23,12 +23,21 @@
       "shortcut" : "",
       "name" : "Without Titles",
       "identifier" : "withoutTitles"
+    },
+    {
+      "script" : "config.js",
+      "handler" : "run",
+      "shortcut" : "",
+      "name" : "Settings",
+      "identifier" : "runSettings"
     }
   ],
   "menu": {
     "items": [
       "withTitles",
-      "withoutTitles"
+      "withoutTitles",
+      "-",
+      "runSettings"
     ],
     "title" : "Quick Presentation"
   }

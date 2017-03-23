@@ -23,9 +23,9 @@
   "authorEmail" : "hello@flinto.com",
   "name" : "Send to Flinto",
   "homepage": "http://www.flinto.com/mac",
-  "version": "1.3.1",
+  "version": "203",
   "manifestURL": "https://www.flinto.com/assets/sketchplugin.manifest.json",
   "downloadURL": "https://www.flinto.com/assets/flinto.sketchplugin.zip",
-  "compatibleVersion": 3.3,
+  "compatibleVersion": 3.5,
   "bundleVersion": 1
 }

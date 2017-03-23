@@ -1,39 +1,25 @@
 @import 'MochaJSDelegate.js'
 @import 'ScreenTemplate.js'
 
-var script_version = "1.3";
+var script_version = "1.4";
 var doc, export_directory;
 var export_scale_factor = 1.0;
 var export_offset = 999999;
 
-var onRun = function(context) {
+var send_to_flinto = function(context) {
 
   doc = context.document
 
-  var artboards = []
-  var ab = context.document.currentPage().artboards()
-  for (var i = 0; i < ab.count(); i++) {
-    artboards.push(ab.objectAtIndex(i))
-  }
-
-  var selectedArtboards = []
-  for (var i = 0; i < context.selection.count(); i++) {
-    var obj = context.selection.objectAtIndex(i)
-    if (is_artboard(obj)) {
-      selectedArtboards.push(obj)
-    }
-  }
+  var artboards = Array.fromNSArray(doc.currentPage().artboards()).filter(is_artboard)
+  var selectedArtboards = Array.fromNSArray(context.selection).filter(is_artboard)
 
   if (artboards.length == 0) {
-    var alert = [[NSAlert alloc] init];
-    [alert setMessageText:"You need at least one artboard to export as a Flinto document."];
-    [alert addButtonWithTitle:'Ok'];
-    [alert runModal]
+    _alert("You need at least one artboard to export as a Flinto document.")
     return
   }
 
   var dialog = new Dialog()
-  var msg = "Send to Flinto"
+  var msg = "Send Artboards to Flinto"
 
   var options = dialog.runModal(msg, artboards[0], selectedArtboards.length)
 
@@ -44,17 +30,11 @@ var onRun = function(context) {
   selectedOnly = options[4]
 
   export_directory = tempFolder()
-  log(export_directory)
-  if (export_directory == nil) {
-    return
-  }
 
   if (selectedOnly) {
     artboards = selectedArtboards
   }
-  var fileManager = [NSFileManager defaultManager],
-      settings_filepath = export_directory + "/metadata.json",
-      settings = [[NSMutableDictionary alloc] init];
+  var fileManager = [NSFileManager defaultManager];
 
   var isDir = MOPointer.alloc().init();
   if ([fileManager fileExistsAtPath:export_directory isDirectory:isDir]) {
@@ -64,22 +44,62 @@ var onRun = function(context) {
   }
 
   var artboard_metadata = [];
-  for (var i = artboards.length - 1; i >= 0; --i) {
-    [doc showMessage:"Exporting " + (artboards.length-i) + " of " + artboards.length + " artboards for Flinto."];
-    log("Exporting " + (artboards.length-i) + "/" + artboards.length + ": processing \"" + artboards[i].name() + "\"...")
-    artboard_metadata.push(process_artboard(artboards[i]))
+
+  var alert = [[NSAlert alloc] init];
+  [alert setMessageText:"Sending to Flinto..."];
+  [alert setInformativeText:""];
+
+  var progress = [[NSProgressIndicator alloc] initWithFrame:CGRectMake(0, 0, 400, 50)]
+  [progress setMaxValue:artboards.length]
+  [progress setMinValue:0]
+  [progress setDoubleValue:0];
+  [progress setUsesThreadedAnimation:true];
+  [progress startAnimation:nil];
+  [progress setIndeterminate:false];
+  [alert setAccessoryView:progress]
+
+
+  var button = [alert addButtonWithTitle:"Cancel"];
+
+  var index = artboards.length - 1;
+
+  var processor = new MochaJSDelegate({
+    "processArtboard:":(function(timer) {
+      var artboard_label = artboards.length > 1 ? "artboards" : "artboard"
+      var message  =  "Completed " + (artboards.length - index) + " out of " + artboards.length + " " + artboard_label + "."
+      [alert setInformativeText: message];
+      [progress setDoubleValue:artboards.length - index];
+      artboard_metadata.push(process_artboard(artboards[index]))
+      index -= 1
+      if (index < 0) {
+        timer.invalidate()
+        [NSApp endSheet:alert.window()];
+      }
+    }),
+  });
+
+  var timer = [NSTimer scheduledTimerWithTimeInterval: 0.05 target: processor.getClassInstance() selector: "processArtboard:" userInfo: nil repeats: true]
+  var runLoop = [NSRunLoop currentRunLoop];
+  [runLoop addTimer:timer forMode:NSRunLoopCommonModes];
+  var responseCode = [alert runModal];
+  if (responseCode == 1000) {
+    return
   }
 
   // Write JSON
-  [settings setValue:pixelDensity forKey:@"scale"];
-  [settings setValue:resolution.width  forKey:@"width"];
-  [settings setValue:resolution.height forKey:@"height"];
-  [settings setValue:artboard_metadata forKey:@"screens"];
-  [settings setValue:doc.currentPage().objectID() forKey:@"id"];
-  [settings setValue:script_version forKey:@"version"];
-  var metadataJSON = [NSJSONSerialization dataWithJSONObject:settings options:NSJSONWritingPrettyPrinted error:nil];
+
+  var json = {
+    scale:pixelDensity,
+    width:resolution.width,
+    height:resolution.height,
+    screens:artboard_metadata,
+    "id":doc.currentPage().objectID(),
+    version:"script_version"
+  };
+
+  var metadataJSON = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:nil];
   metadataJSON = [[NSString alloc] initWithData:metadataJSON encoding:NSUTF8StringEncoding];
-  [metadataJSON writeToFile:settings_filepath atomically:true encoding:NSUTF8StringEncoding error:null];
+  [metadataJSON writeToFile:export_directory + "/metadata.json" atomically:true encoding:NSUTF8StringEncoding error:null];
 
   log(artboards.length + " artboards exported: " + export_directory)
 
@@ -91,23 +111,26 @@ var onRun = function(context) {
 
 var process_artboard = function(artboard) {
 
-  var layers_metadata = []
-  for (var i=0; i<[[artboard layers] count]; i++) {
-    var layer = [[artboard layers] objectAtIndex:i];
-    var p = process_layer(layer, artboard)
-    if (p != undefined && p != nil) {
-      layers_metadata.push(p)
-    }
-  }
+  // var layers_metadata = []
+  var layers_metadata = Array.fromNSArray([artboard layers])
+    .map(function(layer)   { return process_layer(layer, artboard)    })
+    .filter(function(elem) { return elem != undefined && elem != nil  })
 
   var r = artboard.absoluteRect()
+
+  var bg = artboard_background(artboard)
+  if (bg != nil) {
+    layers_metadata.unshift(bg)
+  }
 
   return {
     'layers':layers_metadata,
     'id':artboard.objectID(),
     'name':artboard.name(),
     'x':(r.x()) * export_scale_factor,
-    'y':(r.y()) * export_scale_factor
+    'y':(r.y()) * export_scale_factor,
+    'w':(r.width()) * export_scale_factor,
+    'h':(r.height()) * export_scale_factor,
   }
 };
 
@@ -126,6 +149,18 @@ var process_layer = function(layer, artboard) {
   }
   if (is_slice(layer)) {
     return nil
+  }
+
+  var processing_symbol = false
+  if (is_symbol_instance(layer)) {
+    var originalID = layer.objectID()
+    layer = [[layer duplicate] detachByReplacingWithGroup]
+    // Ref #2148 calling `detachByReplacingWithGroup` on empty symbol returns nil
+    if (layer == nil) {
+      return nil
+    }
+    [layer setObjectID:originalID]
+    processing_symbol = true
   }
 
   if (is_group(layer) && should_flatten_layer(layer) == false && layer.rotation() == 0) {
@@ -175,54 +210,55 @@ var process_layer = function(layer, artboard) {
     }
   }
 
-  return layer_data;
-}
-
-var is_mask_group = function(layer) {
-  if (is_group(layer) && layer.layers().count() > 0) {
-    var clip = layer.layers().objectAtIndex(0)
-    if (clip.hasClippingMask()) {
-      return true
-    }
+  if (processing_symbol) {
+    [layer removeFromParent]
   }
-  return false
+
+  return layer_data;
 }
 
 var duplicate_and_process_layer = function(layer, callback) {
 
   // Copy off-screen, out of artboard so it is not masked by artboard
   var clone = [layer duplicate];
-  var originalOpacity = layer.style().contextSettings().opacity()
-  if (originalOpacity != 1) {
-    clone.style().contextSettings().setOpacity(1)
-    log("Update opacity")
+
+  try {
+
+    var originalOpacity = layer.style().contextSettings().opacity()
+    if (originalOpacity != 1) {
+      clone.style().contextSettings().setOpacity(1)
+    }
+    clone.setRotation(0)
+    [clone removeFromParent];
+    [[doc currentPage] addLayers: [clone]];
+    var frame = [clone frame];
+    [frame setX: export_offset];
+    [frame setY: export_offset];
+
+    var result = callback(clone)
+
+    if (originalOpacity != clone.style().contextSettings().opacity()) {
+      clone.style().contextSettings().setOpacity(originalOpacity)
+    }
+
+    [clone removeFromParent];
+
+    return result
   }
-  clone.setRotation(0)
-  [clone removeFromParent];
-  [[doc currentPage] addLayers: [clone]];
-  var frame = [clone frame];
-  [frame setX: export_offset];
-  [frame setY: export_offset];
-
-  var result = callback(clone)
-
-  if (originalOpacity != clone.style().contextSettings().opacity()) {
-    log("Revert opacity")
-    clone.style().contextSettings().setOpacity(originalOpacity)
+  catch (e) {
+    // Make sure to remove cloned layer
+    try { [clone removeFromParent]; } catch (e) {}
+    throw e
   }
-
-  [clone removeFromParent];
-
-  return result
 
 }
 
 var export_mask_layer = function(layer, mask_index, artboard) {
 
-  if (mask_index == layer.layers().count() - 1) {
-    log("Ignore mask on top of group")
-    return nil
-  }
+  // if (mask_index == layer.layers().count() - 1) {
+  //   log("Ignore mask on top of group")
+  //   return nil
+  // }
   return duplicate_and_process_layer(layer, function(layer_copy) {
 
     var sublayers = [layer_copy layers]
@@ -242,9 +278,9 @@ var export_mask_layer = function(layer, mask_index, artboard) {
 
     layer_data = metadata_for(layer, layer_copy, artboard);
     layer_data.type = "image";
-    layer_data["id"] = mask_layer.objectID()
+    layer_data["id"] = layer.objectID()
 
-    var path_to_file = export_directory + "/" + artboard.objectID() + "/" + [mask_layer objectID] + ".png";
+    var path_to_file = export_directory + "/" + artboard.objectID() + "/" + [layer objectID] + ".png";
     export_as_slice(layer_copy, path_to_file)
 
     for (var i = 0; i < toBeHidden.length; ++i) {
@@ -259,12 +295,28 @@ var export_mask_layer = function(layer, mask_index, artboard) {
 
 var export_layer = function(layer, artboard) {
 
+  var d = rectangle_layer_data(layer, artboard)
+
+  if (d != nil) {
+    return d
+  }
+
+  var path_to_file = export_directory + "/" + artboard.objectID() + "/" + [layer objectID] + ".png";
+
+  // Disable this for now...
+  //
+  // if (is_bitmap(layer)) {
+  //   var layer_data = metadata_for(layer, layer, artboard);
+  //   layer_data.type = "image";
+  //   [[[layer image] data] writeToFile:path_to_file atomically:true];
+  //   return layer_data;
+  // }
+
+
   return duplicate_and_process_layer(layer, function(layer_copy) {
 
     var layer_data = metadata_for(layer, layer_copy, artboard);
     layer_data.type = "image";
-
-    var path_to_file = export_directory + "/" + artboard.objectID() + "/" + [layer objectID] + ".png";
     export_as_slice(layer_copy, path_to_file)
 
     return layer_data;
@@ -273,39 +325,107 @@ var export_layer = function(layer, artboard) {
 }
 
 var export_rect = function(layer) {
-  return [MSSliceTrimming trimmedRectForSlice:layer];
+  if (is_group(layer)) {
+    var rects = []
+    var sublayers = [layer layers];
+    if ([sublayers count] == 0) {
+      return export_rect_impl(layer)
+    }
+    for (var sub= 0; sub < [sublayers count] ; sub++) {
+      var child = [sublayers objectAtIndex:sub];
+      rects.push(export_rect(child))
+    }
+    var r = rects[0]
+    for (var i = 1; i < rects.length; i++) {
+      r = CGRectUnion(r, rects[i])
+    }
+    return r
+  }
+  else {
+    return export_rect_impl(layer)
+  }
+}
+
+var export_rect_impl = function(layer) {
+  if (is_text(layer)) {
+    if ([MSSliceTrimming respondsToSelector:"trimmedRectForLayerAncestry:"]) {
+      return [MSSliceTrimming trimmedRectForLayerAncestry:[MSImmutableLayerAncestry ancestryWithMSLayer:layer]];
+    }
+    else {
+      return [MSSliceTrimming trimmedRectForSlice:layer];
+    }
+  }
+  else {
+    return [layer absoluteInfluenceRect];
+
+  }
 }
 
 var export_as_slice = function(layer, path) {
-  var slice = [MSExportRequest requestWithRect:export_rect(layer) scale:export_scale_factor];
+  // var slice = [MSExportRequest requestWithRect:export_rect(layer) scale:export_scale_factor];
+  var slice = [MSExportRequest new]
+  slice.rect = export_rect(layer)
+  slice.scale = export_scale_factor
   [doc saveArtboardOrSlice:slice toFile:path];
 }
 
 var metadata_for = function(layer, layer_copy, artboard) {
-  var gkrect = [GKRect rectWithRect:export_rect(layer_copy)]
+
+  var er = [MSRect rectWithRect:export_rect(layer_copy)];
+  var ero = [layer_copy absoluteRect];
+
+  var diff = {
+    x: (ero.x() + ero.width()/2) - (er.x() + er.width() / 2),
+    y: (ero.y() + ero.height()/2) - (er.y() + er.height() / 2)
+  }
+
   var lr = [layer absoluteRect];
   var ar = [artboard absoluteRect];
 
   center = {
-    x: (lr.x() + gkrect.x() - export_offset - ar.x()) + gkrect.width() / 2,
-    y: (lr.y() + gkrect.y() - export_offset - ar.y()) + gkrect.height() / 2,
+    x: (lr.x() - ar.x() - diff.x) + lr.width() / 2,
+    y: (lr.y() - ar.y() - diff.y) + lr.height() / 2,
   }
 
-  return {
+  if (layer == layer_copy) {
+    center = {
+      x: (lr.x() - ar.x()) + lr.width() / 2,
+      y: (lr.y() - ar.y()) + lr.height() / 2,
+    }
+    er = layer.frame()
+  }
+
+  var ret = {
     x: center.x * export_scale_factor,
     y: center.y * export_scale_factor,
-    w: gkrect.width()  * export_scale_factor,
-    h: gkrect.height() * export_scale_factor,
+    w: er.width()  * export_scale_factor,
+    h: er.height() * export_scale_factor,
     rotation:layer.rotation(),
     opacity: layer.style().contextSettings().opacity(),
     "id": layer.objectID(),
     name : [layer name],
     locked: [layer isLocked]
   };
+
+  return ret
 }
 
 var is_group = function(layer) {
-  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
+  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]] || [layer isMemberOfClass:[MSSymbolMaster class]]
+}
+
+var is_mask_group = function(layer) {
+  if (is_group(layer) && layer.layers().count() > 0) {
+    var clip = layer.layers().objectAtIndex(0)
+    if (clip.hasClippingMask()) {
+      return true
+    }
+  }
+  return false
+}
+
+var is_symbol_instance = function(layer) {
+  return [layer isMemberOfClass:[MSSymbolInstance class]]
 }
 
 var is_text = function(layer) {
@@ -320,8 +440,8 @@ var is_artboard = function(layer) {
   return [layer isMemberOfClass:[MSArtboardGroup class]];
 }
 
-var is_symbol = function(layer) {
-  return [layer parentOrSelfIsSymbol];
+var is_bitmap = function(layer) {
+  return [layer isMemberOfClass:[MSBitmapLayer class]];
 }
 
 var should_ignore_layer = function(layer) {
@@ -335,7 +455,7 @@ var should_flatten_layer = function(layer) {
   var sublayers = [layer layers];
   for (var sub= 0; sub < [sublayers count] ; sub++) {
     var child = [sublayers objectAtIndex:sub];
-    if (is_group(child)) {
+    if (is_group(child) || is_symbol_instance(child)) {
       return false
     }
   }
@@ -343,9 +463,175 @@ var should_flatten_layer = function(layer) {
 }
 
 
+var color_data = function(color) {
+  return {
+    "r": [color red],
+    "g": [color green],
+    "b": [color blue],
+    "a": [color alpha]
+  };
+}
+
+
+
+//
+// Export rectangle
+//
+var rectangle_layer_data = function(layer, artboard) {
+
+  var style = [layer style];
+  var layer_data = {}
+
+  var enabled_style = function(styleCollection) {
+    var arr
+    try {
+      arr = Array.fromNSArray(styleCollection.array())
+    }
+    catch (e) {
+      arr = Array.fromNSArray(styleCollection)
+    }
+    return arr.filter(function(style) { return style.isEnabled()})
+  }
+
+  var enabledBorders = enabled_style([style borders]);
+  var enabledFills = enabled_style([style fills]);
+  var enabledShadows = enabled_style([style shadows])
+
+  if (layer.hasClippingMask()) {
+    return nil
+  }
+
+  // multiple borders, or shadows
+  if (enabledBorders.length > 1 || enabledShadows.length > 1) {
+    return nil;
+  }
+
+  // Unsupported border options
+  if ([style startDecorationType] != 0 || [style endDecorationType] != 0 || [[style borderOptions] hasDashPattern]) {
+    return nil;
+  }
+
+  if ([[style blur] isEnabled]) {
+    return nil
+  }
+
+  // Multiple fills, or inneshadow
+  if (enabledFills.length > 1 || (enabled_style([style innerShadows]).length > 0)) {
+    return nil;
+  }
+
+  if ([layer isMemberOfClass:[MSShapeGroup class]]) {
+    var paths = [layer layers];
+    if ([paths count] != 1) {
+      return nil;
+    }
+
+    var shape = [paths firstObject];
+
+    if ([shape isMemberOfClass:[MSRectangleShape class]]) {
+      if ([[shape cornerRadiusString] containsString:"/"]) {
+        return nil;
+      }
+      else if ([shape edited]) {
+        return nil
+      }
+      else {
+        layer_data.cornerRadius = [shape cornerRadiusFloat] * export_scale_factor;
+      }
+    }
+    else if ([shape isMemberOfClass:[MSOvalShape class]]) {
+      var frame = [shape frame]
+      if (Math.abs([frame width] - [frame height] < 1)) {
+        layer_data.cornerRadius = [frame width]/2 * export_scale_factor;
+      }
+      else {
+        return nil
+      }
+    }
+    else {
+      return nil;
+    }
+
+    if (enabledFills.length == 1) {
+      var firstFill = enabledFills[0];
+      if ([firstFill fillType] == 0) {
+        layer_data.fillColor = color_data([firstFill colorGeneric])
+      }
+      else {
+        return nil
+      }
+    }
+  }
+  else {
+    return nil;
+  }
+
+
+  if (enabledBorders.length == 1) {
+    var border = enabledBorders[0]
+    if ([border fillType] == 0) {
+      layer_data.borderColor = color_data([border colorGeneric])
+      layer_data.borderWidth = [border thickness] * export_scale_factor
+      var pos = [border position]
+      if (pos == 0) {
+         layer_data.borderType = 1
+      } else if (pos == 1) {
+         layer_data.borderType = 0
+      } else if (pos == 2) {
+         layer_data.borderType = 2
+      }
+    }
+    else {
+      return nil
+    }
+  }
+
+  if (enabledShadows.length == 1) {
+    var shadow = enabledShadows[0]
+    layer_data.shadowColor = color_data([shadow colorGeneric])
+    layer_data.shadowOffsetX = [shadow offsetX] * export_scale_factor
+    layer_data.shadowOffsetY = [shadow offsetY] * export_scale_factor
+    layer_data.shadowBlur    = [shadow blurRadius] * export_scale_factor
+    layer_data.shadowSpread  = [shadow spread] * export_scale_factor
+  }
+
+  var m = metadata_for(layer, layer, artboard)
+  m.style = layer_data
+  m.type = "rectangle"
+  return m
+
+}
+
+var artboard_background = function(artboard)  {
+
+  if ([artboard hasBackgroundColor] && [artboard includeBackgroundColorInExport]) {
+    var artboard_data = {fillColor: color_data([artboard backgroundColorGeneric])}
+
+    var ar = [artboard absoluteRect];
+
+    center = {x: ar.width() / 2, y: ar.height() / 2}
+
+    return {
+      x: center.x * export_scale_factor,
+      y: center.y * export_scale_factor,
+      w: ar.width()  * export_scale_factor,
+      h: ar.height() * export_scale_factor,
+      "id": artboard.objectID() + "-BG",
+      name : "Background",
+      style:artboard_data,
+      type:"rectangle"
+    };
+  }
+  else {
+    return nil
+  }
+}
+
+
 //
 //
 //
+// Export Dialog
 //
 //
 //
@@ -390,37 +676,40 @@ Dialog.prototype.runModal = function(msg, artboard, selectedCount) {
   this.initialSize = {width:r.width(), height:r.height()}
 
   var resolutionLabel = createLabel("Scale", NSMakeRect(16, 122, 94, 17))
-  var combobox = [[NSComboBox alloc] initWithFrame:NSMakeRect(118, 116, 165, 26)];
+  var combobox = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(118, 116, 165, 26)];
 
   this.combobox = combobox
-  var dialog = this
-
-  var delegate = new MochaJSDelegate({
-    "controlTextDidChange:":(function(note) {
-      dialog.updateSizeTextField()
-    }),
-      "comboBoxSelectionIsChanging:": (function(note){
-      dialog.updateSizeTextField()
-      })
-  });
-
-
   var obj = this;
+
+  var scaleItemCallback = function(item) {
+      obj.updateSizeTextField()
+  }
+
+  var scales = ["50%", "100%", "150%", "200%", "300%"];
+  scales.forEach(function(elem) {
+    var item = [[NSMenuItem alloc] initWithTitle:elem action: "didChooseTemplate" keyEquivalent: ""]
+    item.representedObject = elem
+    [item setCOSJSTargetFunction:scaleItemCallback]
+    [[combobox menu] addItem:item];
+  })
+
+
+
   var menuItemCallback = function(item) {
     var tmpl = item.representedObject()
     var w = tmpl["width"]
     var h = tmpl["height"]
+    var density = tmpl["density"]
     if (w != 0 && h != 0) {
-      var scale = parseFloat([combobox stringValue].replace(/[^0-9]/g,"")) / 100;
-      obj.initialSize.width = w / scale
-      obj.initialSize.height = h / scale
+      obj.initialSize.width = w / density
+      obj.initialSize.height = h / density
+      var scaleFactorIndexs = [0, 1, 3, 4];
+      [combobox selectItemAtIndex:scaleFactorIndexs[density]]
+      obj.isLandscape = false
       obj.updateSizeTextField()
     }
   }
 
-
-  [combobox setDelegate:delegate.getClassInstance()];
-  [combobox addItemsWithObjectValues:["50%", "100%", "150%", "200%", "300%"]];
 
   var setInitialSize = false
   var pixelDensity = 1.0
@@ -433,7 +722,7 @@ Dialog.prototype.runModal = function(msg, artboard, selectedCount) {
 
     for (var i in category["templates"]) {
       var tmpl = category["templates"][i]
-      var item = [[NSMenuItem alloc] initWithTitle:tmpl["name"] action: "didChooseTempalte" keyEquivalent: ""]
+      var item = [[NSMenuItem alloc] initWithTitle:tmpl["name"] action: "didChooseTemplate" keyEquivalent: ""]
       item.indentationLevel = 1
       item.representedObject = tmpl
       [item setCOSJSTargetFunction:menuItemCallback]
@@ -476,8 +765,11 @@ Dialog.prototype.runModal = function(msg, artboard, selectedCount) {
   }
 
 
-  this.widthField = [[NSTextField alloc] initWithFrame:CGRectMake(118, 39, 75, 22)]
-  this.heightField = [[NSTextField alloc] initWithFrame:CGRectMake(205, 39, 75, 22)]
+  var widthField = [[NSTextField alloc] initWithFrame:CGRectMake(118, 39, 75, 22)]
+  var heightField = [[NSTextField alloc] initWithFrame:CGRectMake(205, 39, 75, 22)]
+
+  this.widthField = widthField
+  this.heightField = heightField
 
   var widthLabel = createLabel("Width", CGRectMake(118, 21, 75, 18))
   [widthLabel setAlignment:2]
@@ -493,6 +785,9 @@ Dialog.prototype.runModal = function(msg, artboard, selectedCount) {
   [checkBox setTitle:@"Export only selected artboards"];
   if (selectedCount == 0) {
     [checkBox setEnabled:false];
+  }
+  else {
+    [checkBox setState:true];
   }
 
   var scaleFactorIndex = 1;
@@ -527,14 +822,22 @@ Dialog.prototype.runModal = function(msg, artboard, selectedCount) {
   [alert addButtonWithTitle:'Cancel'];
   [alert setAccessoryView:view];
 
+  [widthField setNextKeyView:heightField];
+  [heightField setNextKeyView:widthField];
+
   var responseCode = [alert runModal];
 
-  var scale = parseFloat([combobox stringValue].replace(/[^0-9]/g,"")) / 100;
+  var scale = parseFloat([combobox representedObject].replace(/[^0-9]/g,"")) / 100;
   var deviceType = [dropdown indexOfSelectedItem]
   var selectedOnly = [checkBox state];
 
-  resolution = {"width":this.widthField.doubleValue(), "height":this.heightField.doubleValue()}
+  var gs = [[NSLocale currentLocale] objectForKey:NSLocaleGroupingSeparator];
+  var ds = [[NSLocale currentLocale] objectForKey:NSLocaleDecimalSeparator];
 
+
+  var width  = this.widthField.stringValue().replace(gs, "").replace(ds, ".")
+  var height = this.heightField.stringValue().replace(gs, "").replace(ds, ".")
+  resolution = {"width":parseFloat(width), "height":parseFloat(height)}
   log(resolution.width + "x" +  resolution.height + "@" + scale + "x " + pixelDensity)
 
 
@@ -558,15 +861,43 @@ Dialog.prototype.updateSizeTextField = function() {
   }
 
   var combobox = this.combobox
-  if ([combobox indexOfSelectedItem] != -1) {
-    var s = parseFloat([combobox objectValueOfSelectedItem])/100
-  }
-  else {
-    var s = parseFloat([combobox stringValue].replace(/[^0-9]/g,"")) / 100;
-  }
+  var s = parseFloat([combobox representedObject].replace(/[^0-9]/g,"")) / 100;
 
   [wField setStringValue:w * s];
   [hField setStringValue:h * s];
 }
 
-//onRun(context)
+//
+// Some utilities
+//
+
+Array.fromNSArray = function(nsa) {
+  var ret = []
+  for (i = 0; i < nsa.count(); ++i) {
+    ret.push(nsa.objectAtIndex(i))
+  }
+  return ret;
+}
+
+var _alert = function(message, informativeText) {
+  var alert = [[NSAlert alloc] init];
+  [alert setMessageText:message];
+  [alert addButtonWithTitle:"Dismiss"];
+  if (informativeText != undefined) {
+    [alert setInformativeText:informativeText]
+  }
+  [alert runModal]
+}
+
+var onRun = function(context) {
+
+  try {
+    send_to_flinto(context)
+  }
+  catch (e) {
+    log(e)
+    _alert("Something went wrong with the plugin.", e.message)
+  }
+
+}
+

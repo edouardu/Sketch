@@ -1,0 +1,31 @@
+{
+  "author" : "",
+  "commands" : [
+    {
+      "script" : "script.cocoascript",
+      "handler" : "onRun",
+      "shortcut" : "cmd shift ctrl f",
+      "name" : "Send to Flinto",
+      "identifier" : "export-for-flinto",
+      "isRoot" : true
+
+    },
+  ],
+  "menu" : {
+    "title" : "Send to Flinto",
+    "isRoot" : true,
+    "items" : [
+      "export-for-flinto",
+    ],
+  },
+  "identifier" : "com.flinto.sketch-plugin",
+  "description": "Send artboards to Flinto.",
+  "authorEmail" : "hello@flinto.com",
+  "name" : "Send to Flinto",
+  "homepage": "http://www.flinto.com/mac",
+  "version": "222",
+  "manifestURL": "https://www.flinto.com/assets/sketchplugin.manifest.json",
+  "downloadURL": "https://www.flinto.com/assets/flinto.sketchplugin.zip",
+  "compatibleVersion": 40.0,
+  "bundleVersion": 1
+}

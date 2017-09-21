@@ -1,0 +1,51 @@
+// thanks for stopping by to look at our code :]
+// we love you, nosy nellie <3
+
+// ACTIONS
+var onStartup = function(context) {
+    coscript.setShouldKeepAround(false);
+
+    // print a little message about which version is starting
+    var version = context.plugin.version();
+    log('zeroheight ' + version + ' started');
+
+    // init the plugin
+    if (loadFrameworks(context)) {
+        var toggleSpecifier = [[MSPluginCommandSpecifier alloc]
+             initWithPluginBundleIdentifier:'com.zeroheight.sketch'
+             commandIdentifier:'zeroheighttogglePanel']
+
+        [[ZeroheightSketch sharedInstance] start:context toggleSpecifier:toggleSpecifier];
+    }
+}
+
+var onOpenDocument = function(context) {
+    if (loadFrameworks(context)) {
+        var instance = [ZeroheightSketch sharedInstance];
+        instance.openDoc(context.plugin.url());
+    }
+}
+
+var onSelectionChanged = function(context) { //for later
+}
+
+// COMMANDS
+
+var toggleZeroheight = function(context) {
+    if (loadFrameworks(context)) {
+        [[ZeroheightSketch sharedInstance] trigger:context];
+    }
+}
+
+// UTILITIES
+function loadFrameworks(context) {
+    var scriptPath = context.scriptPath;
+    var pluginRoot = [scriptPath stringByDeletingLastPathComponent];
+    if (NSClassFromString('ZeroheightSketch') == null) {
+        if(![[Mocha sharedRuntime] loadFrameworkWithName:'ZeroheightSketch' inDirectory:pluginRoot]){
+            log("ZeroheightSketch could not be loaded");
+            return false;
+        }
+    }
+    return true;
+}
